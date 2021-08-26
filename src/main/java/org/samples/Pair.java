@@ -1,6 +1,8 @@
 package org.samples;
 
+import org.lambda.query.OrderBy;
 import org.lambda.query.Query;
+import org.lambda.query.Queryable;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -20,22 +22,27 @@ public class Pair implements EvaluateHand {
         }  if (p2 == null){
             return h1;
         }
-        if(p1.getRankValue() < p2.getRankValue())
-            return h2;
-        if(p2.getRankValue() < p1.getRankValue())
+        if(wins(p1, p2))
             return h1;
+        if(wins(p2, p1))
+            return h2;
         return null;
     }
 
-    private Rank checkForPair(Hand h1) {
+    private boolean wins(Queryable<Rank> p1, Queryable<Rank> p2) {
+        return p2.get(0).getRankValue() < p1.get(0).getRankValue();
+    }
+
+    private Queryable<Rank> checkForPair(Hand h1) {
         Map<Rank, Long> result =
             h1.cards.stream().collect(
                 Collectors.groupingBy(c-> c.rank, Collectors.counting()              )
             );
 
-        if (!result.values().contains(2L)){
+        var pairs = Query.where(result.entrySet(), e -> e.getValue() == 2L);
+        if (pairs.size() != 1) {
             return null;
         }
-        return Query.first(result.entrySet(), e -> e.getValue() == 2L).getKey();
+        return pairs.select(e -> e.getKey()).orderBy(OrderBy.Order.Descending, r -> r.getRankValue());
     }
 }
